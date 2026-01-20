@@ -1,0 +1,17 @@
+{
+  "name": "personal-finance-backend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node backend/server.js",
+    "verify:supabase": "node backend/scripts/verifySupabase.js",
+    "smoke:auth": "node backend/scripts/authSmokeTest.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.56.0",
+    "dotenv": "^17.2.3",
+    "express": "^4.19.2",
+    "plaid": "^41.0.0"
+  }
+}
