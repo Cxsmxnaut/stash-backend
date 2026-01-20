@@ -1,39 +1,52 @@
-const crypto = require('crypto');
 const express = require('express');
 const plaidService = require('./plaid.service');
+const { plaidClient } = require('../config/plaidClient');
 const { asyncHandler } = require('../middleware/asyncHandler');
+const { compactVerify, importJWK } = require('jose');
 
 const router = express.Router();
 
-function verifySignature(req) {
-  const secret = process.env.PLAID_WEBHOOK_SECRET;
-  const signatureHeader = req.headers['plaid-webhook-signature'];
+const keyCache = new Map();
 
-  if (!secret || !signatureHeader || !req.rawBody) {
+async function getVerificationKey(keyId) {
+  const cached = keyCache.get(keyId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.key;
+  }
+
+  const response = await plaidClient.webhookVerificationKeyGet({ key_id: keyId });
+  const jwk = response.data.key;
+  const key = await importJWK(jwk, jwk.alg);
+  keyCache.set(keyId, { key, expiresAt: Date.now() + 60 * 60 * 1000 });
+  return key;
+}
+
+async function verifySignature(req) {
+  const signature = req.headers['plaid-webhook-signature'];
+  const keyId = req.headers['plaid-verification-key-id'];
+
+  if (!signature || !keyId || !req.rawBody) {
     return false;
   }
 
-  const computed = crypto
-    .createHmac('sha256', secret)
-    .update(req.rawBody)
-    .digest('hex');
+  const key = await getVerificationKey(keyId);
+  const { payload } = await compactVerify(signature, key);
 
-  const expected = `v1=${computed}`;
-  const signatures = signatureHeader.split(',').map((part) => part.trim());
+  const body = req.rawBody.toString('utf8');
+  const signedPayload = Buffer.from(payload).toString('utf8');
 
-  return signatures.some((sig) => {
-    try {
-      return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
-    } catch (error) {
-      return false;
-    }
-  });
+  return body === signedPayload;
 }
 
 router.post(
   '/',
   asyncHandler(async (req, res) => {
-    const verified = verifySignature(req);
+    let verified = false;
+    try {
+      verified = await verifySignature(req);
+    } catch (error) {
+      verified = false;
+    }
     if (!verified) {
       const event = req.body || {};
       console.warn('Rejected Plaid webhook', {

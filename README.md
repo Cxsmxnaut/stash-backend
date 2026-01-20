@@ -81,7 +81,7 @@ Analytics (read-only, auth required):
 - `GET /analytics/trends?interval=daily|weekly&days=30`
 
 Webhook verification:
-- Set `PLAID_WEBHOOK_SECRET` to validate webhook signatures.
+- Webhooks are verified using Plaid verification keys (no shared secret needed).
 
 ## Optional auth smoke test
 ```
