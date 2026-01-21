@@ -54,7 +54,7 @@ async function createLinkToken(userId) {
     user: {
       client_user_id: userId,
     },
-    client_name: 'Personal Finance App',
+    client_name: 'Stash',
     products: DEFAULT_PRODUCTS,
     country_codes: DEFAULT_COUNTRY_CODES,
     language: 'en',

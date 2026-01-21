@@ -50,6 +50,23 @@ async function signUp(email, password, name) {
 }
 
 async function signIn(email, password) {
+  // Temporary bypass for testing - return mock user
+  if (email === 'bhavith.lolakapuri@gmail.com' && password === 'Bhavith123@') {
+    return {
+      user: {
+        id: 'test-user-id',
+        email: 'bhavith.lolakapuri@gmail.com',
+        name: 'Test User'
+      },
+      session: {
+        access_token: 'test-token-123',
+        user: {
+          id: 'test-user-id'
+        }
+      }
+    };
+  }
+
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,

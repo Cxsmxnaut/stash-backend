@@ -6,13 +6,21 @@
   "scripts": {
     "start": "node backend/server.js",
     "verify:supabase": "node backend/scripts/verifySupabase.js",
-    "smoke:auth": "node backend/scripts/authSmokeTest.js"
+    "smoke:auth": "node backend/scripts/authSmokeTest.js",
+    "test:api": "node scripts/apiTest.js",
+    "test:health": "node scripts/healthCheck.js",
+    "deploy:render": "echo 'Deploy to Render via render.yaml'",
+    "deploy:vercel": "vercel --prod"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.56.0",
+    "axios": "^1.6.0",
     "dotenv": "^17.2.3",
     "express": "^4.19.2",
     "jose": "^5.3.0",
     "plaid": "^41.0.0"
+  },
+  "devDependencies": {
+    "vercel": "^32.0.0"
   }
 }
