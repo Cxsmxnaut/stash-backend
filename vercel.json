@@ -1,1 +1,1 @@
-{"version": 2, "builds": [{"src": "backend/server.js", "use": "@vercel/node"}], "routes": [{"src": "/api/(.*)", "dest": "/api/$1"}, {"src": "/plaid/webhook", "dest": "/plaid/webhook"}, {"src": "/health", "dest": "/health"}], "env": {"NODE_ENV": "production", "PORT": "3000"}, "functions": {"api/*.js": {"maxDuration": 30}}}
+{"version": 2, "functions": {"api/index.js": {"maxDuration": 30}}, "routes": [{"src": "/(.*)", "dest": "/api/index.js"}], "env": {"NODE_ENV": "production", "PORT": "3000"}}
