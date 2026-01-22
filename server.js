@@ -74,7 +74,14 @@ app.post('/auth/login', async (req, res) => {
     });
 
     if (error) {
-      return res.status(400).json({ error: error.message });
+      // Handle specific authentication errors
+      if (error.message.includes('Invalid login credentials')) {
+        return res.status(401).json({ error: 'Invalid email or password. Please check your credentials and try again.' });
+      } else if (error.message.includes('Email not confirmed')) {
+        return res.status(400).json({ error: 'Please confirm your email address before logging in.' });
+      } else {
+        return res.status(400).json({ error: error.message });
+      }
     }
 
     res.json({
@@ -113,7 +120,16 @@ app.post('/auth/signup', async (req, res) => {
     });
 
     if (error) {
-      return res.status(400).json({ error: error.message });
+      // Handle specific signup errors
+      if (error.message.includes('User already registered')) {
+        return res.status(400).json({ error: 'An account with this email already exists. Please try logging in instead.' });
+      } else if (error.message.includes('Password should be at least')) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+      } else if (error.message.includes('Invalid email')) {
+        return res.status(400).json({ error: 'Please enter a valid email address.' });
+      } else {
+        return res.status(400).json({ error: error.message });
+      }
     }
 
     res.status(201).json({
