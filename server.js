@@ -1,7 +1,14 @@
 require('dotenv').config();
 const express = require('express');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+);
 
 // CORS middleware
 app.use((req, res, next) => {
@@ -17,8 +24,8 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '1mb' }));
 
-// Mock authentication middleware
-const authenticateToken = (req, res, next) => {
+// Real authentication middleware
+const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -26,11 +33,17 @@ const authenticateToken = (req, res, next) => {
     return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Authorization token required' });
   }
 
-  // Mock token validation - accept any token that starts with 'mock-token'
-  if (token.startsWith('mock-token')) {
-    req.user = { id: '1', email: 'test@example.com', name: 'Test User' };
+  try {
+    // Verify JWT token with Supabase
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error || !user) {
+      return res.status(403).json({ error: 'FORBIDDEN', message: 'Invalid token' });
+    }
+
+    req.user = user;
     next();
-  } else {
+  } catch (error) {
     return res.status(403).json({ error: 'FORBIDDEN', message: 'Invalid token' });
   }
 };
@@ -53,11 +66,31 @@ app.post('/auth/login', async (req, res) => {
     return res.status(400).json({ error: 'email and password are required' });
   }
 
-  // TODO: Replace with actual authentication logic
-  res.json({
-    user: { id: '1', email, name: 'Test User' },
-    session: { access_token: 'mock-token-' + Date.now() }
-  });
+  try {
+    // Real authentication with Supabase
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.json({
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.user_metadata?.name || data.user.email
+      },
+      session: { 
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 app.post('/auth/signup', async (req, res) => {
@@ -67,16 +100,45 @@ app.post('/auth/signup', async (req, res) => {
     return res.status(400).json({ error: 'email, password, and name are required' });
   }
 
-  // TODO: Replace with actual signup logic
-  res.status(201).json({
-    user: { id: '1', email, name },
-    session: { access_token: 'mock-token-' + Date.now() }
-  });
+  try {
+    // Real signup with Supabase
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name: name
+        }
+      }
+    });
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.status(201).json({
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.user_metadata?.name || name
+      },
+      session: { 
+        access_token: data.session?.access_token,
+        refresh_token: data.session?.refresh_token
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 app.get('/auth/me', authenticateToken, (req, res) => {
   res.json({
-    user: req.user
+    user: {
+      id: req.user.id,
+      email: req.user.email,
+      name: req.user.user_metadata?.name || req.user.email
+    }
   });
 });
 
