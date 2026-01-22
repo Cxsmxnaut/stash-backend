@@ -17,6 +17,24 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '1mb' }));
 
+// Mock authentication middleware
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Authorization token required' });
+  }
+
+  // Mock token validation - accept any token that starts with 'mock-token'
+  if (token.startsWith('mock-token')) {
+    req.user = { id: '1', email: 'test@example.com', name: 'Test User' };
+    next();
+  } else {
+    return res.status(403).json({ error: 'FORBIDDEN', message: 'Invalid token' });
+  }
+};
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ 
@@ -56,19 +74,14 @@ app.post('/auth/signup', async (req, res) => {
   });
 });
 
-app.get('/auth/me', (req, res) => {
-  // TODO: Replace with actual JWT verification
+app.get('/auth/me', authenticateToken, (req, res) => {
   res.json({
-    user: {
-      id: '1',
-      email: 'test@example.com',
-      name: 'Test User'
-    }
+    user: req.user
   });
 });
 
 // Data endpoints
-app.get('/accounts', (req, res) => {
+app.get('/accounts', authenticateToken, (req, res) => {
   res.json({
     data: [
       {
@@ -85,7 +98,7 @@ app.get('/accounts', (req, res) => {
   });
 });
 
-app.get('/transactions', (req, res) => {
+app.get('/transactions', authenticateToken, (req, res) => {
   const mockTransactions = [
     {
       id: '1',
@@ -125,7 +138,7 @@ app.get('/transactions', (req, res) => {
   });
 });
 
-app.get('/analytics/overview', (req, res) => {
+app.get('/analytics/overview', authenticateToken, (req, res) => {
   res.json({
     data: {
       total_balance: 5432.10,
@@ -139,7 +152,7 @@ app.get('/analytics/overview', (req, res) => {
   });
 });
 
-app.get('/subscriptions', (req, res) => {
+app.get('/subscriptions', authenticateToken, (req, res) => {
   res.json({
     data: [
       {
@@ -171,7 +184,7 @@ app.get('/subscriptions', (req, res) => {
 });
 
 // Additional endpoints for frontend
-app.get('/categories', (req, res) => {
+app.get('/categories', authenticateToken, (req, res) => {
   res.json({
     data: [
       { id: '1', user_id: '1', name: 'Food', color: '#10B981', is_default: true },
@@ -181,10 +194,77 @@ app.get('/categories', (req, res) => {
   });
 });
 
-app.get('/notifications', (req, res) => {
+app.get('/notifications', authenticateToken, (req, res) => {
   res.json({
     data: []
   });
+});
+
+// Additional endpoints needed by frontend
+app.get('/analytics/trends', authenticateToken, (req, res) => {
+  const { interval = 'daily', days = 7 } = req.query;
+  const mockTrends = [];
+  
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    mockTrends.push({
+      date: date.toISOString().split('T')[0],
+      amount: Math.random() * 100 + 50
+    });
+  }
+  
+  res.json({ data: mockTrends });
+});
+
+app.get('/subscriptions/upcoming', authenticateToken, (req, res) => {
+  const { days = 30 } = req.query;
+  const mockUpcoming = [
+    {
+      id: '1',
+      merchant: 'Netflix',
+      amount: 15.99,
+      currency: 'USD',
+      next_payment_date: '2024-02-01',
+      days_until_payment: 5
+    },
+    {
+      id: '2',
+      merchant: 'Spotify',
+      amount: 9.99,
+      currency: 'USD',
+      next_payment_date: '2024-02-05',
+      days_until_payment: 9
+    }
+  ];
+  
+  res.json({ data: mockUpcoming });
+});
+
+// Plaid endpoints
+app.post('/plaid/create_link_token', authenticateToken, (req, res) => {
+  res.json({
+    data: { link_token: 'mock-link-token-' + Date.now() }
+  });
+});
+
+app.post('/plaid/exchange_public_token', authenticateToken, (req, res) => {
+  res.json({ success: true });
+});
+
+// Subscription management endpoints
+app.put('/subscriptions/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  res.json({ success: true });
+});
+
+app.delete('/subscriptions/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  res.json({ success: true });
+});
+
+app.post('/subscriptions/recompute', authenticateToken, (req, res) => {
+  res.json({ success: true });
 });
 
 // Catch all handler
