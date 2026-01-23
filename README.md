@@ -90,3 +90,4 @@ npm run smoke:auth
 
 Notes:
 - If email confirmation is enabled in Supabase, sign-up may not return a session. Disable confirmation for dev or use a service role for trusted server flows later.
+# Trigger new deploy Thu Jan 22 17:16:23 PST 2026
